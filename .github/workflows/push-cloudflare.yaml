@@ -102,6 +102,15 @@ jobs:
       - name: Replace D1_DATABASE_ID in wrangler.toml
         run: sed -i "s/\${D1_DATABASE_ID}/${{ secrets.D1_DATABASE_ID }}/g" wrangler.toml
 
+      - name: Replace D1_DATABASE_ID_DEV in wrangler.toml
+        run: sed -i "s/\${D1_DATABASE_ID_DEV}/${{ secrets.D1_DATABASE_ID }}/g" wrangler.toml
+
+      - name: Simplify build command in wrangler.toml
+        run: sed -i 's/command = "cargo install.*&& worker-build/command = "worker-build/g' wrangler.toml
+
+      - name: Debug wrangler.toml
+        run: cat wrangler.toml
+
       - name: Enable R2 binding when R2_NAME is provided
         env:
           R2_NAME: ${{ secrets.R2_NAME }}
