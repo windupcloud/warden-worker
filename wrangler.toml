@@ -103,6 +103,7 @@ migrations_dir = "migrations"
 # If R2 is not configured, KV will be used for attachments.
 [[kv_namespaces]]
 binding = "ATTACHMENTS_KV"
+id = "${ATTACHMENTS_KV_ID}"
 
 [env.dev]
 name = "warden-worker-dev"
