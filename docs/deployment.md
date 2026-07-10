@@ -59,7 +59,7 @@ This page covers the two deployment paths. Pick the one that fits your workflow 
 
    ```bash
    # Default pinned version (override by exporting BW_WEB_VERSION)
-   BW_WEB_VERSION="${BW_WEB_VERSION:-v2025.12.0}"
+   BW_WEB_VERSION="${BW_WEB_VERSION:-v2026.4.1}"
    if [ "${BW_WEB_VERSION}" = "latest" ]; then
      BW_WEB_VERSION="$(curl -s https://api.github.com/repos/dani-garcia/bw_web_builds/releases/latest | jq -r .tag_name)"
    fi
@@ -76,7 +76,7 @@ This page covers the two deployment paths. Pick the one that fits your workflow 
    **Optional:** Apply lightweight UI overrides to generate `public/web-vault/css/vaultwarden.css`:
 
    ```bash
-   bash scripts/apply-web-vault-overrides.sh public/web-vault
+   mkdir -p public/web-vault/css/ && cp public/css/vaultwarden.css public/web-vault/css/
    ```
 
 6. **Set up database and deploy the worker:**
@@ -102,6 +102,11 @@ This page covers the two deployment paths. Pick the one that fits your workflow 
 - `JWT_SECRET` a long random string
 - `JWT_REFRESH_SECRET` a long random string
 
+   **Optional mobile push relay settings:**  
+     `PUSH_ENABLED=true`, `PUSH_RELAY_URI`, `PUSH_IDENTITY_URI` as text variables;  
+     `PUSH_INSTALLATION_ID`, `PUSH_INSTALLATION_KEY` as secret variables.  
+     See [Mobile Push Notifications](../README.md#mobile-push-notifications-optional) for more details.
+
 8. **Configure your Bitwarden client:**
 
    In your Bitwarden client, go to the self-hosted login screen and enter the URL of your deployed worker.
@@ -123,6 +128,26 @@ Add the following secrets to your GitHub repository (`Settings > Secrets and var
 | `D1_DATABASE_ID` | yes | Your production D1 database ID |
 | `D1_DATABASE_ID_DEV` | no | Dev D1 database ID (required only if you use the `Deploy Dev` workflow on the `dev` branch) |
 
+#### How to Get Your Cloudflare Account ID
+
+1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. Select your account
+3. Your Account ID is displayed in the right sidebar of the Overview page, or in the URL: `https://dash.cloudflare.com/<account-id>`
+
+#### How to Get Your Cloudflare API Token
+
+The `CLOUDFLARE_API_TOKEN` requires the following permissions:
+- **Edit Cloudflare Workers**: Required for deploying the Worker
+- **Edit D1**: Required for database migrations and backups
+- **Edit KV**: Required for attachments storage (if using KV)
+
+1. Visit [https://dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Click **Create Token**
+3. Use the **Edit Cloudflare Workers** template
+4. Add **Account** → **D1** under `Permissions`
+5. Select `Account Resources` and `Zone Resources`
+6. Click **Continue to Summary** and then **Create Token**
+
 ### Optional Variables
 
 #### Web Vault frontend version
@@ -131,8 +156,8 @@ You can pin/override the bundled Web Vault (bw_web_builds) version via GitHub Ac
 
 | Variable | Applies to | Default | Example | Notes |
 |----------|------------|---------|---------|-------|
-| `BW_WEB_VERSION` | prod (`main/uat/release*`) | `v2025.12.0` | `v2025.12.0` | Set to `latest` to follow upstream latest release |
-| `BW_WEB_VERSION_DEV` | dev (`dev`) | `v2025.12.0` | `v2025.12.0` | Set to `latest` to follow upstream latest release |
+| `BW_WEB_VERSION` | prod (`main/uat/release*`) | `v2026.4.1` | `v2026.4.1` | Set to `latest` to follow upstream latest release |
+| `BW_WEB_VERSION_DEV` | dev (`dev`) | `v2026.4.1` | `v2026.4.1` | Set to `latest` to follow upstream latest release |
 
 #### Global Equivalent Domains
 
@@ -147,20 +172,6 @@ To avoid bundling a large JSON file into the Worker, the dataset can be stored i
 | `GLOBAL_DOMAINS_URL_DEV` | dev | (empty) | raw GitHub URL | Same as prod, but for dev workflow |
 
 If you skip seeding, `/api/settings/domains` and `/api/sync` will return `globalEquivalentDomains: []`.
-
-> [!NOTE]
-> The `CLOUDFLARE_API_TOKEN` must have **both** Worker and D1 permissions:
-> - **Edit Cloudflare Workers** - Required for deploying the Worker
-> - **Edit D1** - Required for database migrations and backups
-> - **Edit KV** - Required for attachments storage (if using KV)
-> 
-> When creating the API token in Cloudflare Dashboard, make sure to add both permissions under "Account" → "Cloudflare Workers" and "Account" → "D1".
-
-### How to Get Your Cloudflare Account ID
-
-1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. Select your account
-3. Your Account ID is displayed in the right sidebar of the Overview page, or in the URL: `https://dash.cloudflare.com/<account-id>`
 
 ### Usage
 
@@ -185,11 +196,18 @@ If you skip seeding, `/api/settings/domains` and `/api/sync` will return `global
 
 5. **Monitor the deployment** in the Actions tab of your repository
 
-6. **Set up tables in database manually** in the Cloudflare dashboard
-
-7. **Set environment variables** as `secret` in the Cloudflare dashboard (following the command line deployment steps):
-   - `ALLOWED_EMAILS` your-email@example.com (supports glob patterns like `*@example.com`)
+6. **Set environment variables** as `secret` in the Cloudflare dashboard (following the command line deployment steps):
+   - `ALLOWED_EMAILS` your-email@example.com (supports glob patterns like `*@example.com`, comma separated)
    - `JWT_SECRET` a long random string
    - `JWT_REFRESH_SECRET` a long random string
+   - Optional mobile push settings:
+     `PUSH_ENABLED=true`, `PUSH_RELAY_URI`, `PUSH_IDENTITY_URI`, `PUSH_INSTALLATION_ID`, `PUSH_INSTALLATION_KEY`.  
+     See [Mobile Push Notifications](../README.md#mobile-push-notifications-optional) for more details.
+
+
+> [!IMPORTANT]
+> The server can't work without these three environment variables. If you forget to set them, the server will crash.
+
+If you want to show a 'Create account' button in frontend, you can add `DISABLE_USER_REGISTRATION` as `text` and set it to `false`. Check [Environment Variables](../README.md#environment-variables) for more details.
 
 By default, the `*.workers.dev` domain is disabled, since it may throw 1101 error. It's highly recommended to use a custom domain instead; see [Configure Custom Domain](../README.md#configure-custom-domain-optional) for more details.
